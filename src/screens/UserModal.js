@@ -26,11 +26,10 @@ export default function UserModal({ route, navigation }) {
 
   const { userId } = route.params || {};
   const dispatch = useAppDispatch();
-  const existing = useAppSelector((s) =>
-    s.users.list.find((u) => u.id === userId)
-  );
+  const list = useAppSelector((s) => s.users.list);
+  const existing = list.find((u) => u.id === userId);
 
-  // Build our payload object
+  // Build the object we’ll send to the slice
   const buildPayload = (values) => ({
     name: values.name.trim(),
     email: values.email.trim(),
@@ -42,7 +41,6 @@ export default function UserModal({ route, navigation }) {
     },
   });
 
-  // Handles both create & update
   const handleSubmit = async (values) => {
     // 1. Name
     if (!values.name.trim()) {
@@ -58,35 +56,56 @@ export default function UserModal({ route, navigation }) {
     }
 
     // 2. Email
-    if (!values.email.trim()) {
+    const trimmedEmail = values.email.trim();
+    if (!trimmedEmail) {
       ToastAndroid.show('Email is required.', ToastAndroid.SHORT);
       return;
     }
-    if (!Eml.test(values.email)) {
-      ToastAndroid.show(
-        'Please enter a valid email address.',
-        ToastAndroid.SHORT
-      );
+    if (!Eml.test(trimmedEmail)) {
+      ToastAndroid.show('Please enter a valid email address.', ToastAndroid.SHORT);
+      return;
+    }
+    // Duplicate email check (exclude self when editing)
+    if (
+      list.some(
+        (u) =>
+          u.email === trimmedEmail &&
+          (existing ? u.id !== existing.id : true)
+      )
+    ) {
+      ToastAndroid.show('Email already exists.', ToastAndroid.SHORT);
       return;
     }
 
     // 3. Phone
-    if (!values.phone.trim()) {
+    const trimmedPhone = values.phone.trim();
+    if (!trimmedPhone) {
       ToastAndroid.show('Mobile number is required.', ToastAndroid.SHORT);
       return;
     }
-    if (values.phone.length !== 10) {
+    if (trimmedPhone.length !== 10) {
       ToastAndroid.show(
         'Mobile number must be exactly 10 digits long.',
         ToastAndroid.SHORT
       );
       return;
     }
-    if (!mob.test(values.phone)) {
+    if (!mob.test(trimmedPhone)) {
       ToastAndroid.show(
         'Please enter a valid mobile number (6–9 start).',
         ToastAndroid.SHORT
       );
+      return;
+    }
+    // Duplicate phone check
+    if (
+      list.some(
+        (u) =>
+          u.phone === trimmedPhone &&
+          (existing ? u.id !== existing.id : true)
+      )
+    ) {
+      ToastAndroid.show('Mobile number already exists.', ToastAndroid.SHORT);
       return;
     }
 
@@ -115,17 +134,16 @@ export default function UserModal({ route, navigation }) {
       return;
     }
 
-    // All checks passed — build and dispatch
-    const base = buildPayload(values);
+    // All validations passed
+    const payload = buildPayload(values);
+
     try {
       if (existing) {
-        // Update flow
-        await dispatch(
-          updateUser({ id: existing.id, ...base })
-        ).unwrap();
+        // Update
+        await dispatch(updateUser({ id: existing.id, ...payload })).unwrap();
       } else {
-        // Create flow
-        await dispatch(createUser(base)).unwrap();
+        // Create
+        await dispatch(createUser(payload)).unwrap();
       }
       navigation.goBack();
     } catch (err) {
@@ -150,15 +168,12 @@ export default function UserModal({ route, navigation }) {
     >
       {({ handleChange, handleSubmit, values }) => (
         <View style={styles.container}>
-          {/* Name */}
           <TextInput
             style={styles.input}
             placeholder="Name"
             value={values.name}
             onChangeText={handleChange('name')}
           />
-
-          {/* Email */}
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -166,8 +181,6 @@ export default function UserModal({ route, navigation }) {
             value={values.email}
             onChangeText={handleChange('email')}
           />
-
-          {/* Phone */}
           <TextInput
             style={styles.input}
             placeholder="Phone"
@@ -176,24 +189,18 @@ export default function UserModal({ route, navigation }) {
             value={values.phone}
             onChangeText={handleChange('phone')}
           />
-
-          {/* Suite */}
           <TextInput
             style={styles.input}
             placeholder="Suite"
             value={values.suite}
             onChangeText={handleChange('suite')}
           />
-
-          {/* Street */}
           <TextInput
             style={styles.input}
             placeholder="Street"
             value={values.street}
             onChangeText={handleChange('street')}
           />
-
-          {/* City */}
           <TextInput
             style={styles.input}
             placeholder="City"
@@ -201,7 +208,6 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('city')}
           />
 
-          {/* Buttons */}
           {existing ? (
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -222,7 +228,7 @@ export default function UserModal({ route, navigation }) {
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.updateBtn]}
+              style={[ styles.updateBtn]}
               onPress={handleSubmit}
             >
               <Text style={styles.btnText}>Create</Text>
@@ -245,7 +251,7 @@ const styles = StyleSheet.create({
     borderColor: colors.fade,
     borderRadius: 4,
     padding: hp(1.5),
-    marginBottom: hp(1.5),
+    marginBottom: hp(1.2),
     fontSize: wp(4),
   },
   buttonRow: {
@@ -261,7 +267,6 @@ const styles = StyleSheet.create({
   },
   updateBtn: {
     backgroundColor: colors.primary,
-    // marginRight: wp(2),
     padding: hp(1.5),
     borderRadius: 4,
     alignItems: 'center',
