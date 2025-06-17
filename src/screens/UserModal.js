@@ -1,12 +1,12 @@
+// src/screens/UserModal.js
 import React from 'react';
 import {
   View,
   TextInput,
-  Button,
   Text,
   StyleSheet,
   ToastAndroid,
-  TouchableOpacity
+  TouchableOpacity,
 } from 'react-native';
 import { Formik } from 'formik';
 import {
@@ -16,17 +16,125 @@ import {
 } from '../features/users/usersSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import colors from '../theme/colors';
+import { heightToDp as hp, widthToDp as wp } from '../store/responsive';
 
 export default function UserModal({ route, navigation }) {
+  // Validation regexes
   const Eml = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
   const mob = /^[6-9]\d{9}$/;
   const nameRegex = /^[a-zA-Z\s]+$/;
 
   const { userId } = route.params || {};
   const dispatch = useAppDispatch();
-  const existing = useAppSelector(s =>
-    s.users.list.find(u => u.id === userId)
+  const existing = useAppSelector((s) =>
+    s.users.list.find((u) => u.id === userId)
   );
+
+  // Build our payload object
+  const buildPayload = (values) => ({
+    name: values.name.trim(),
+    email: values.email.trim(),
+    phone: values.phone.trim(),
+    address: {
+      suite: values.suite.trim(),
+      street: values.street.trim(),
+      city: values.city.trim(),
+    },
+  });
+
+  // Handles both create & update
+  const handleSubmit = async (values) => {
+    // 1. Name
+    if (!values.name.trim()) {
+      ToastAndroid.show('Name is required.', ToastAndroid.SHORT);
+      return;
+    }
+    if (!nameRegex.test(values.name)) {
+      ToastAndroid.show(
+        'Name can only contain letters and spaces.',
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+
+    // 2. Email
+    if (!values.email.trim()) {
+      ToastAndroid.show('Email is required.', ToastAndroid.SHORT);
+      return;
+    }
+    if (!Eml.test(values.email)) {
+      ToastAndroid.show(
+        'Please enter a valid email address.',
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+
+    // 3. Phone
+    if (!values.phone.trim()) {
+      ToastAndroid.show('Mobile number is required.', ToastAndroid.SHORT);
+      return;
+    }
+    if (values.phone.length !== 10) {
+      ToastAndroid.show(
+        'Mobile number must be exactly 10 digits long.',
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+    if (!mob.test(values.phone)) {
+      ToastAndroid.show(
+        'Please enter a valid mobile number (6–9 start).',
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+
+    // 4. Suite
+    if (!values.suite.trim()) {
+      ToastAndroid.show('Suite is required.', ToastAndroid.SHORT);
+      return;
+    }
+
+    // 5. Street
+    if (!values.street.trim()) {
+      ToastAndroid.show('Street is required.', ToastAndroid.SHORT);
+      return;
+    }
+
+    // 6. City
+    if (!values.city.trim()) {
+      ToastAndroid.show('City is required.', ToastAndroid.SHORT);
+      return;
+    }
+    if (!nameRegex.test(values.city)) {
+      ToastAndroid.show(
+        'City can only contain letters and spaces.',
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+
+    // All checks passed — build and dispatch
+    const base = buildPayload(values);
+    try {
+      if (existing) {
+        // Update flow
+        await dispatch(
+          updateUser({ id: existing.id, ...base })
+        ).unwrap();
+      } else {
+        // Create flow
+        await dispatch(createUser(base)).unwrap();
+      }
+      navigation.goBack();
+    } catch (err) {
+      ToastAndroid.show(
+        'Error saving user. Please try again.',
+        ToastAndroid.SHORT
+      );
+    }
+  };
 
   return (
     <Formik
@@ -38,87 +146,11 @@ export default function UserModal({ route, navigation }) {
         street: existing?.address?.street || '',
         city: existing?.address?.city || '',
       }}
-      onSubmit={(values) => {
-        // 1. Name validation
-        if (!values.name.trim()) {
-          ToastAndroid.show("Name is required.", ToastAndroid.SHORT);
-          return;
-        }
-        if (!nameRegex.test(values.name)) {
-          ToastAndroid.show("Name can only contain letters and spaces.", ToastAndroid.SHORT);
-          return;
-        }
-
-        // 2. Email validation
-        if (!values.email.trim()) {
-          ToastAndroid.show("Email is required.", ToastAndroid.SHORT);
-          return;
-        }
-        if (!Eml.test(values.email)) {
-          ToastAndroid.show("Please enter a valid email address.", ToastAndroid.SHORT);
-          return;
-        }
-
-        // 3. Phone validation
-        if (!values.phone.trim()) {
-          ToastAndroid.show("Mobile number is required.", ToastAndroid.SHORT);
-          return;
-        }
-        if (values.phone.length !== 10) {
-          ToastAndroid.show("Mobile number must be exactly 10 digits long.", ToastAndroid.SHORT);
-          return;
-        }
-        if (!mob.test(values.phone)) {
-          ToastAndroid.show("Please enter a valid mobile number (6–9 start).", ToastAndroid.SHORT);
-          return;
-        }
-
-        // 4. Suite
-        if (!values.suite.trim()) {
-          ToastAndroid.show("Suite is required.", ToastAndroid.SHORT);
-          return;
-        }
-
-        // 5. Street
-        if (!values.street.trim()) {
-          ToastAndroid.show("Street is required.", ToastAndroid.SHORT);
-          return;
-        }
-
-        // 6. City
-        if (!values.city.trim()) {
-          ToastAndroid.show("City is required.", ToastAndroid.SHORT);
-          return;
-        }
-        if (!nameRegex.test(values.city)) {
-          ToastAndroid.show("City can only contain letters and spaces.", ToastAndroid.SHORT);
-          return;
-        }
-
-        // Build the payload
-        const payload = {
-          name: values.name.trim(),
-          email: values.email.trim(),
-          phone: values.phone.trim(),
-          address: {
-            suite: values.suite.trim(),
-            street: values.street.trim(),
-            city: values.city.trim(),
-          },
-        };
-
-        // Dispatch the correct action
-        if (existing) {
-          dispatch(updateUser({ id: existing.id, ...payload }));
-        } else {
-          dispatch(createUser(payload));
-        }
-
-        navigation.goBack();
-      }}
+      onSubmit={handleSubmit}
     >
       {({ handleChange, handleSubmit, values }) => (
         <View style={styles.container}>
+          {/* Name */}
           <TextInput
             style={styles.input}
             placeholder="Name"
@@ -126,6 +158,7 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('name')}
           />
 
+          {/* Email */}
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -134,6 +167,7 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('email')}
           />
 
+          {/* Phone */}
           <TextInput
             style={styles.input}
             placeholder="Phone"
@@ -143,6 +177,7 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('phone')}
           />
 
+          {/* Suite */}
           <TextInput
             style={styles.input}
             placeholder="Suite"
@@ -150,6 +185,7 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('suite')}
           />
 
+          {/* Street */}
           <TextInput
             style={styles.input}
             placeholder="Street"
@@ -157,6 +193,7 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('street')}
           />
 
+          {/* City */}
           <TextInput
             style={styles.input}
             placeholder="City"
@@ -164,6 +201,7 @@ export default function UserModal({ route, navigation }) {
             onChangeText={handleChange('city')}
           />
 
+          {/* Buttons */}
           {existing ? (
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -174,8 +212,8 @@ export default function UserModal({ route, navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.btn, styles.deleteBtn]}
-                onPress={() => {
-                  dispatch(deleteUser(existing.id));
+                onPress={async () => {
+                  await dispatch(deleteUser(existing.id)).unwrap();
                   navigation.goBack();
                 }}
               >
@@ -190,7 +228,6 @@ export default function UserModal({ route, navigation }) {
               <Text style={styles.btnText}>Create</Text>
             </TouchableOpacity>
           )}
-
         </View>
       )}
     </Formik>
@@ -198,37 +235,44 @@ export default function UserModal({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  container: {
+    flex: 1,
+    padding: hp(2),
+    backgroundColor: '#fff',
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.fade,
     borderRadius: 4,
-    padding: 8,
-    marginBottom: 12,
+    padding: hp(1.5),
+    marginBottom: hp(1.5),
+    fontSize: wp(4),
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: hp(2),
   },
   btn: {
     flex: 1,
-    padding: 12,
+    padding: hp(1.5),
     borderRadius: 4,
     alignItems: 'center',
   },
   updateBtn: {
-    padding: 12,
+    backgroundColor: colors.primary,
+    // marginRight: wp(2),
+    padding: hp(1.5),
     borderRadius: 4,
     alignItems: 'center',
-    backgroundColor: '#0066cc',
   },
   deleteBtn: {
     backgroundColor: 'red',
-    marginLeft: 8,
+    marginLeft: wp(2),
   },
   btnText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: wp(4),
   },
 });
