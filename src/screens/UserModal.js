@@ -184,30 +184,13 @@ export default function UserModal({ route, navigation }) {
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.btn, styles.updateBtn]}
+              style={[styles.updateBtn]}
               onPress={handleSubmit}
             >
               <Text style={styles.btnText}>Create</Text>
             </TouchableOpacity>
           )}
 
-          {/* <Button
-            title={existing ? 'Update' : 'Create'}
-            onPress={handleSubmit}
-          />
-
-          {existing && (
-            <View style={{ marginTop: 8 }}>
-              <Button
-                title="Delete"
-                color="red"
-                onPress={() => {
-                  dispatch(deleteUser(existing.id));
-                  navigation.goBack();
-                }}
-              />
-            </View>
-          )} */}
         </View>
       )}
     </Formik>
@@ -235,8 +218,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   updateBtn: {
+    padding: 12,
+    borderRadius: 4,
+    alignItems: 'center',
     backgroundColor: '#0066cc',
-    marginRight: 8,   // space between the two buttons
   },
   deleteBtn: {
     backgroundColor: 'red',

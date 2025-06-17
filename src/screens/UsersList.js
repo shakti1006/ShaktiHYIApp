@@ -26,6 +26,15 @@ export default function UsersList({ navigation }) {
     }
   }, [dispatch, loading, hasNextPage]);
 
+   if (loading && list.length === 0) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size={wp(8)} color={colors.primary} />
+        <Text style={styles.loadingText}>Loading Data...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {error && <Text style={styles.error}>{error}</Text>}
@@ -70,4 +79,16 @@ const styles = StyleSheet.create({
   error: { color: 'red', textAlign: 'center', margin: 8 },
   footer: { padding: 16, alignItems: 'center' },
   noMore: { color: '#666' },
+  loaderContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: hp(2),
+    color: colors.text,
+    fontSize: wp(4.5),
+    fontFamily: 'QuaternaryFont',
+  },
 });

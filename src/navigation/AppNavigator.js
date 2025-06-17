@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UsersList from '../screens/UsersList';
 import UserModal from '../screens/UserModal';
 import Splash from '../screens/Splash';
+import colors from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +25,9 @@ export default function AppNavigator() {
           component={UsersList}
           options={() => ({
             title: 'User List',
+            headerStyle: { backgroundColor: colors.primary },
+            headerTitleStyle: { fontWeight: 'bold' },
+            headerTintColor: '#fff',
           })}
         />
         <Stack.Group screenOptions={{ presentation: 'modal' }}>
