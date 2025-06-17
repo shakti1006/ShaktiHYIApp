@@ -19,18 +19,18 @@ import colors from '../theme/colors';
 import { heightToDp as hp, widthToDp as wp } from '../store/responsive';
 
 export default function UserModal({ route, navigation }) {
-  // Validation regexes
-  const Eml = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  const mob = /^[6-9]\d{9}$/;
+  // Regex validations
+  const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+  const phoneRegex = /^[6-9]\d{9}$/;
   const nameRegex = /^[a-zA-Z\s]+$/;
 
   const { userId } = route.params || {};
   const dispatch = useAppDispatch();
-  const list = useAppSelector((s) => s.users.list);
-  const existing = list.find((u) => u.id === userId);
+  const userList = useAppSelector(s => s.users.list);
+  const existing = userList.find(u => u.id === userId);
 
-  // Build the object we’ll send to the slice
-  const buildPayload = (values) => ({
+  // Build the payload object
+  const buildPayload = values => ({
     name: values.name.trim(),
     email: values.email.trim(),
     phone: values.phone.trim(),
@@ -41,116 +41,96 @@ export default function UserModal({ route, navigation }) {
     },
   });
 
-  const handleSubmit = async (values) => {
-    // 1. Name
+  // Combined submit handler
+  const handleSubmit = async values => {
+    // 1) Name
     if (!values.name.trim()) {
       ToastAndroid.show('Name is required.', ToastAndroid.SHORT);
       return;
     }
     if (!nameRegex.test(values.name)) {
-      ToastAndroid.show(
-        'Name can only contain letters and spaces.',
-        ToastAndroid.SHORT
-      );
+      ToastAndroid.show('Name can only contain letters.', ToastAndroid.SHORT);
       return;
     }
 
-    // 2. Email
-    const trimmedEmail = values.email.trim();
-    if (!trimmedEmail) {
+    // 2) Email
+    const email = values.email.trim();
+    if (!email) {
       ToastAndroid.show('Email is required.', ToastAndroid.SHORT);
       return;
     }
-    if (!Eml.test(trimmedEmail)) {
-      ToastAndroid.show('Please enter a valid email address.', ToastAndroid.SHORT);
+    if (!emailRegex.test(email)) {
+      ToastAndroid.show('Enter a valid email.', ToastAndroid.SHORT);
       return;
     }
-    // Duplicate email check (exclude self when editing)
-    if (
-      list.some(
-        (u) =>
-          u.email === trimmedEmail &&
-          (existing ? u.id !== existing.id : true)
-      )
-    ) {
+    // duplicate email?
+    if (userList.some(u => u.email === email && (existing ? u.id !== existing.id : true))) {
       ToastAndroid.show('Email already exists.', ToastAndroid.SHORT);
       return;
     }
 
-    // 3. Phone
-    const trimmedPhone = values.phone.trim();
-    if (!trimmedPhone) {
-      ToastAndroid.show('Mobile number is required.', ToastAndroid.SHORT);
+    // 3) Phone
+    const phone = values.phone.trim();
+    if (!phone) {
+      ToastAndroid.show('Phone is required.', ToastAndroid.SHORT);
       return;
     }
-    if (trimmedPhone.length !== 10) {
-      ToastAndroid.show(
-        'Mobile number must be exactly 10 digits long.',
-        ToastAndroid.SHORT
-      );
+    if (!phoneRegex.test(phone)) {
+      ToastAndroid.show('Enter a valid 10-digit mobile starting 6–9.', ToastAndroid.SHORT);
       return;
     }
-    if (!mob.test(trimmedPhone)) {
-      ToastAndroid.show(
-        'Please enter a valid mobile number (6–9 start).',
-        ToastAndroid.SHORT
-      );
-      return;
-    }
-    // Duplicate phone check
-    if (
-      list.some(
-        (u) =>
-          u.phone === trimmedPhone &&
-          (existing ? u.id !== existing.id : true)
-      )
-    ) {
+    // duplicate phone?
+    if (userList.some(u => u.phone === phone && (existing ? u.id !== existing.id : true))) {
       ToastAndroid.show('Mobile number already exists.', ToastAndroid.SHORT);
       return;
     }
 
-    // 4. Suite
+    // 4) Suite
     if (!values.suite.trim()) {
       ToastAndroid.show('Suite is required.', ToastAndroid.SHORT);
       return;
     }
 
-    // 5. Street
+    // 5) Street
     if (!values.street.trim()) {
       ToastAndroid.show('Street is required.', ToastAndroid.SHORT);
       return;
     }
 
-    // 6. City
+    // 6) City
     if (!values.city.trim()) {
       ToastAndroid.show('City is required.', ToastAndroid.SHORT);
       return;
     }
     if (!nameRegex.test(values.city)) {
-      ToastAndroid.show(
-        'City can only contain letters and spaces.',
-        ToastAndroid.SHORT
-      );
+      ToastAndroid.show('City can only contain letters.', ToastAndroid.SHORT);
       return;
     }
 
-    // All validations passed
+    // Build and dispatch
     const payload = buildPayload(values);
-
     try {
       if (existing) {
-        // Update
         await dispatch(updateUser({ id: existing.id, ...payload })).unwrap();
+        ToastAndroid.show('User edited successfully', ToastAndroid.SHORT);
       } else {
-        // Create
         await dispatch(createUser(payload)).unwrap();
+        ToastAndroid.show('User added successfully', ToastAndroid.SHORT);
       }
       navigation.goBack();
     } catch (err) {
-      ToastAndroid.show(
-        'Error saving user. Please try again.',
-        ToastAndroid.SHORT
-      );
+      ToastAndroid.show('Error saving user. Please try again.', ToastAndroid.SHORT);
+    }
+  };
+
+  // Delete handler
+  const handleDelete = async () => {
+    try {
+      await dispatch(deleteUser(existing.id)).unwrap();
+      ToastAndroid.show('User deleted successfully', ToastAndroid.SHORT);
+      navigation.goBack();
+    } catch {
+      ToastAndroid.show('Error deleting user. Please try again.', ToastAndroid.SHORT);
     }
   };
 
@@ -174,6 +154,7 @@ export default function UserModal({ route, navigation }) {
             value={values.name}
             onChangeText={handleChange('name')}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -181,6 +162,7 @@ export default function UserModal({ route, navigation }) {
             value={values.email}
             onChangeText={handleChange('email')}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Phone"
@@ -189,18 +171,21 @@ export default function UserModal({ route, navigation }) {
             value={values.phone}
             onChangeText={handleChange('phone')}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Suite"
             value={values.suite}
             onChangeText={handleChange('suite')}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Street"
             value={values.street}
             onChangeText={handleChange('street')}
           />
+
           <TextInput
             style={styles.input}
             placeholder="City"
@@ -218,10 +203,7 @@ export default function UserModal({ route, navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.btn, styles.deleteBtn]}
-                onPress={async () => {
-                  await dispatch(deleteUser(existing.id)).unwrap();
-                  navigation.goBack();
-                }}
+                onPress={handleDelete}
               >
                 <Text style={styles.btnText}>Delete</Text>
               </TouchableOpacity>
@@ -251,7 +233,7 @@ const styles = StyleSheet.create({
     borderColor: colors.fade,
     borderRadius: 4,
     padding: hp(1.5),
-    marginBottom: hp(1.2),
+    marginBottom: hp(1),
     fontSize: wp(4),
   },
   buttonRow: {
