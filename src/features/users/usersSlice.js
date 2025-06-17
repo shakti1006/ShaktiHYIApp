@@ -1,4 +1,5 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+// src/features/users/usersSlice.js
+import { createSlice, createAsyncThunk, nanoid } from '@reduxjs/toolkit';
 import {
   fetchUsersAPI,
   createUserAPI,
@@ -20,36 +21,35 @@ export const fetchUsers = createAsyncThunk(
   }
 );
 
-// CREATE: return exactly what we posted (including nested fields)
+// CREATE: generate a unique client‐side ID so deletes only affect that one
 export const createUser = createAsyncThunk(
   'users/create',
-  async (user, { fulfillWithValue, rejectWithValue }) => {
+  async (user, { fulfillWithValue }) => {
     try {
-      const res = await createUserAPI(user);
-      // JSONPlaceholder echoes back only id; so merge in our full user
-      return fulfillWithValue({ id: res.data.id, ...user });
-    } catch (err) {
-      return rejectWithValue(err.message);
+      // still hit the API so the network path is exercised
+      await createUserAPI(user);
+    } catch {
+      // ignore failures from mock API
     }
+    const id = nanoid();
+    return fulfillWithValue({ id, ...user });
   }
 );
 
-// UPDATE: same idea—ignore API response, return your full object
+// UPDATE: ignore mock API errors but always return your full payload
 export const updateUser = createAsyncThunk(
   'users/update',
   async (user, { fulfillWithValue }) => {
     try {
-      // try the real API for side-effects
       await updateUserAPI(user);
-    } catch (err) {
-      // swallow any error (500, 404, etc.) so we still update locally
-      console.warn('Update API failed, applying locally anyway:', err.message);
+    } catch {
+      // swallow errors
     }
-    // always return the exact object we passed in
     return fulfillWithValue(user);
   }
 );
 
+// DELETE: remove by the single unique ID
 export const deleteUser = createAsyncThunk(
   'users/delete',
   async (id, { rejectWithValue }) => {
@@ -74,7 +74,9 @@ const usersSlice = createSlice({
   name: 'users',
   initialState,
   reducers: {
-    resetError(state) { state.error = null; },
+    resetError(state) {
+      state.error = null;
+    },
     incrementPage(state) {
       if (state.hasNextPage) state.page += 1;
     },
@@ -82,7 +84,10 @@ const usersSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // FETCH
-      .addCase(fetchUsers.pending, (s) => { s.loading = true; s.error = null; })
+      .addCase(fetchUsers.pending, (s) => {
+        s.loading = true;
+        s.error = null;
+      })
       .addCase(fetchUsers.fulfilled, (s, { payload }) => {
         s.loading = false;
         s.list.push(...payload);
@@ -109,7 +114,6 @@ const usersSlice = createSlice({
         if (idx !== -1) s.list[idx] = payload;
       })
       .addCase(updateUser.rejected, (s) => {
-        // we no longer reject — this should never happen now
         s.loading = false;
       })
 
