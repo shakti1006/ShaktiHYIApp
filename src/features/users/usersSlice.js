@@ -20,7 +20,7 @@ export const fetchUsers = createAsyncThunk(
   }
 );
 
-// ◀️ CREATE: return exactly what we posted (including nested fields)
+// CREATE: return exactly what we posted (including nested fields)
 export const createUser = createAsyncThunk(
   'users/create',
   async (user, { fulfillWithValue, rejectWithValue }) => {
@@ -34,7 +34,7 @@ export const createUser = createAsyncThunk(
   }
 );
 
-// ◀️ UPDATE: same idea—ignore API response, return your full object
+// UPDATE: same idea—ignore API response, return your full object
 export const updateUser = createAsyncThunk(
   'users/update',
   async (user, { fulfillWithValue }) => {

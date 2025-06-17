@@ -1,4 +1,3 @@
-// src/screens/UserModal.js
 import React from 'react';
 import {
   View,
